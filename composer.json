@@ -1,8 +1,8 @@
 {
     "name": "front-interop/impl",
     "type": "library",
-    "description": "",
-    "keywords": [],
+    "description": "Reference implementations for Front-Interop.",
+    "keywords": ["front", "controller"],
     "license": "MIT",
     "homepage": "https://github.com/front-interop/impl",
     "authors": [
@@ -43,11 +43,5 @@
         "hello": "php -S localhost:8080 -t public",
         "test": "./vendor/bin/phpunit",
         "test-coverage": "./vendor/bin/phpunit --coverage-html=./tmp/coverage"
-    },
-    "repositories": [
-        {
-            "type": "path",
-            "url": "../interface"
-        }
-    ]
+    }
 }

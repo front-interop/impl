@@ -41,7 +41,7 @@ Run `composer hello` at the package root, then visit:
 
 A specialized front controller for [FrankenPHP][], wrapping a
 `RequestFrontController` in a `frankenphp_handle_request()` worker loop
-bounded by a configurable maximum request count.
+bounded by an optional maximum request count (`0` for unbounded).
 
 ## Classes
 

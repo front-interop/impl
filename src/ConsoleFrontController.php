@@ -40,7 +40,6 @@ class ConsoleFrontController implements FrontController
             fwrite($this->stdout, "Hello {$name}!" . PHP_EOL);
             return 0;
         } catch (Throwable $e) {
-            error_log((string) $e);
             fwrite($this->stderr, (string) $e . PHP_EOL);
             return 1;
         }

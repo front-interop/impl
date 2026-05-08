@@ -31,8 +31,9 @@ class FrankenFrontController implements FrontController
 
             while (
                 $this->continue
-                && $this->requestMax !== 0
-                && $this->requestNum < $this->requestMax
+                && (
+                    $this->requestMax === 0 || $this->requestNum < $this->requestMax
+                )
             ) {
                 $this->requestNum ++;
                 $this->continue = frankenphp_handle_request($handler);
