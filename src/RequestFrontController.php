@@ -4,11 +4,13 @@ declare(strict_types=1);
 namespace FrontInterop\Impl;
 
 use FrontInterop\Interface\FrontController;
-
 use Throwable;
 
 class RequestFrontController implements FrontController
 {
+    /**
+     * @inheritdoc
+     */
     public function run() : int
     {
         try {
@@ -29,8 +31,10 @@ class RequestFrontController implements FrontController
             echo $this->html($text);
             return $code;
         } catch (Throwable $e) {
-            http_response_code(500);
             error_log((string) $e);
+            http_response_code(500);
+            header('content-type: text/plain');
+            echo $e;
             return 1;
         }
     }

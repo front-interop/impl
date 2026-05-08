@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace FrontInterop\Impl;
 
 use FrontInterop\Interface\FrontController;
-
 use Throwable;
 
 class ConsoleFrontController implements FrontController
@@ -21,13 +20,20 @@ class ConsoleFrontController implements FrontController
     ) {
     }
 
+    /**
+     * @inheritdoc
+     */
     public function run() : int
     {
         try {
             $name = $this->argv[1] ?? null;
 
             if (! $name) {
-                fwrite($this->stderr, "Please enter a name to say hello to." . PHP_EOL);
+                fwrite(
+                    $this->stderr,
+                    "Please enter a name to say hello to." . PHP_EOL,
+                );
+
                 return 1;
             }
 
@@ -35,6 +41,7 @@ class ConsoleFrontController implements FrontController
             return 0;
         } catch (Throwable $e) {
             error_log((string) $e);
+            fwrite($this->stderr, (string) $e . PHP_EOL);
             return 1;
         }
     }

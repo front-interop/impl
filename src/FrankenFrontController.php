@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace FrontInterop\Impl;
 
 use FrontInterop\Interface\FrontController;
-
 use Throwable;
 
 class FrankenFrontController implements FrontController
@@ -13,13 +12,18 @@ class FrankenFrontController implements FrontController
 
     protected int $requestNum = 0;
 
+    /**
+     * @var int<0,254>
+     */
     protected int $lastExitCode = 0;
 
-    public function __construct(
-        protected int $requestMax = 0,
-    ) {
+    public function __construct(protected int $requestMax = 0)
+    {
     }
 
+    /**
+     * @inheritdoc
+     */
     public function run() : int
     {
         try {
