@@ -19,6 +19,29 @@ abstract class AFrontController implements FrontController
     abstract public function run() : int;
 
     /**
+     * Reports the caught Throwable, then releases it inside a guard; the
+     * caller's variable is null afterwards. The release runs the Throwable's
+     * destructor, which may throw, and a throw after run() has its status
+     * would reach the caller.
+     *
+     * @param-out null $e
+     * @return front_exit_status_int
+     */
+    protected function caught(Throwable &$e) : int
+    {
+        $status = $this->error($e);
+
+        try {
+            $e = null;
+
+            /** @phpstan-ignore catch.neverThrown */
+        } catch (Throwable) {
+        }
+
+        return $status;
+    }
+
+    /**
      * @return front_exit_status_int
      */
     abstract protected function error(Throwable $e) : int;
@@ -33,21 +56,6 @@ abstract class AFrontController implements FrontController
         }
 
         return $stream;
-    }
-
-    /**
-     * Releases the caught Throwable inside a guard. Its destructor runs on
-     * release and may throw, and a throw after run() has its status would
-     * reach the caller.
-     */
-    protected function release(?Throwable &$e) : void
-    {
-        try {
-            $e = null;
-
-            /** @phpstan-ignore catch.neverThrown */
-        } catch (Throwable) {
-        }
     }
 
     protected function log(Throwable $e) : void

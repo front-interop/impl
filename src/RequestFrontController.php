@@ -34,9 +34,7 @@ class RequestFrontController extends AFrontController
         try {
             return $this->hello();
         } catch (Throwable $e) {
-            $status = $this->error($e);
-            $this->release($e);
-            return $status;
+            return $this->caught($e);
         }
     }
 
