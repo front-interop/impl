@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace FrontInterop\Impl;
 
 use InvalidArgumentException;
+use LogicException;
 use PHPUnit\Framework\TestCase;
 use Throwable;
 use TypeError;
@@ -89,6 +90,33 @@ class ConsoleFrontControllerTest extends TestCase
         fclose($stdout);
         $this->assertSame(1, $front->run());
         $this->assertStringContainsString('TypeError', $this->read($stderr));
+    }
+
+    public function testZeroIsAName() : void
+    {
+        $stdout = $this->memory();
+        $front = new ConsoleFrontController(['hello.php', '0'], $stdout);
+        $this->assertSame(0, $front->run());
+        $this->assertSame("Hello 0!" . PHP_EOL, $this->read($stdout));
+    }
+
+    public function testThrowingLogDoesNotEscape() : void
+    {
+        $stderr = $this->memory();
+
+        $front = new class (
+            ['hello.php'],
+            $this->memory(),
+            $stderr,
+        ) extends ConsoleFrontController {
+            protected function log(Throwable $e) : void
+            {
+                throw new LogicException('the log failed too');
+            }
+        };
+
+        fclose($stderr);
+        $this->assertSame(1, $front->run());
     }
 
     public function testRejectsNonStreamStdout() : void

@@ -72,7 +72,13 @@ class FrankenFrontController implements FrontController
      */
     protected function error(Throwable $e) : int
     {
-        $this->log($e);
+        // nothing here may throw; a throw would escape run() itself
+        try {
+            $this->log($e);
+        } catch (Throwable) {
+            // no channel is left to report on
+        }
+
         return 1;
     }
 

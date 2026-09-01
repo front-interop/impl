@@ -3,12 +3,57 @@ declare(strict_types=1);
 
 namespace FrontInterop\Impl;
 
+use LogicException;
+use PHPUnit\Framework\Attributes\BackupGlobals;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Throwable;
 
 class FrankenFrontControllerTest extends TestCase
 {
+    #[BackupGlobals(true)]
+    public function testTheRealHandlerServesTheRequest() : void
+    {
+        $franken = new class (1) extends FrankenFrontController {
+            protected function handleRequest(callable $handler) : bool
+            {
+                $handler();
+                return false;
+            }
+        };
+
+        $_GET = ['name' => 'World'];
+        ob_start();
+        $exit = $franken->run();
+        $html = (string) ob_get_clean();
+
+        $this->assertSame(0, $exit);
+        $this->assertStringContainsString('Hello World!', $html);
+    }
+
+    public function testThrowingLogDoesNotEscape() : void
+    {
+        $franken = new class (1) extends FrankenFrontController {
+            protected function handleRequest(callable $handler) : bool
+            {
+                $handler();
+                return false;
+            }
+
+            protected function handler() : void
+            {
+                throw new RuntimeException('boom');
+            }
+
+            protected function log(Throwable $e) : void
+            {
+                throw new LogicException('the log failed too');
+            }
+        };
+
+        $this->assertSame(1, $franken->run());
+    }
+
     public function testRequestMaxBoundsTheLoop() : void
     {
         $franken = new class (3) extends FrankenFrontController {

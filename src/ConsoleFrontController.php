@@ -67,7 +67,7 @@ class ConsoleFrontController implements FrontController
     {
         $name = $this->argv[1] ?? null;
 
-        if (! $name) {
+        if ($name === null || $name === '') {
             fwrite(
                 $this->stderr,
                 "Please enter a name to say hello to." . PHP_EOL,
@@ -85,11 +85,18 @@ class ConsoleFrontController implements FrontController
      */
     protected function error(Throwable $e) : int
     {
-        // a throw here would escape run() itself
+        // nothing here may throw; a throw would escape run() itself
         try {
             fwrite($this->stderr, (string) $e . PHP_EOL);
+            return 1;
         } catch (Throwable) {
+            // stderr failed, so fall back to the log
+        }
+
+        try {
             $this->log($e);
+        } catch (Throwable) {
+            // no channel is left to report on
         }
 
         return 1;

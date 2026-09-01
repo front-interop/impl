@@ -4,7 +4,9 @@ declare(strict_types=1);
 namespace FrontInterop\Impl;
 
 use InvalidArgumentException;
+use LogicException;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use Throwable;
 use TypeError;
 
@@ -14,6 +16,11 @@ class RequestFrontControllerTest extends TestCase
     {
         // a sentinel, so a status the front controller never sets cannot pass
         http_response_code(599);
+    }
+
+    protected function tearDown() : void
+    {
+        http_response_code(200);
     }
 
     /**
@@ -138,6 +145,32 @@ class RequestFrontControllerTest extends TestCase
         fclose($stdout);
         $this->assertSame(1, $front->run());
         $this->assertInstanceOf(TypeError::class, $front->logged);
+    }
+
+    public function testZeroIsAName() : void
+    {
+        $stdout = $this->memory();
+        $front = new RequestFrontController(['name' => '0'], $stdout);
+        $this->assertSame(0, $front->run());
+        $this->assertSame(200, http_response_code());
+        $this->assertStringContainsString('Hello 0!', $this->read($stdout));
+    }
+
+    public function testThrowingLogDoesNotEscape() : void
+    {
+        $front = new class ([], $this->memory()) extends RequestFrontController {
+            protected function hello() : int
+            {
+                throw new RuntimeException('boom');
+            }
+
+            protected function log(Throwable $e) : void
+            {
+                throw new LogicException('the log failed too');
+            }
+        };
+
+        $this->assertSame(1, $front->run());
     }
 
     public function testRejectsNonStreamStdout() : void

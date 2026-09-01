@@ -52,7 +52,7 @@ class RequestFrontController implements FrontController
     {
         $name = $this->query['name'] ?? null;
 
-        if ($name) {
+        if ($name !== null && $name !== '') {
             http_response_code(200);
             $name = htmlspecialchars($name, encoding: 'UTF-8');
             $text = "Hello {$name}!";
@@ -81,15 +81,19 @@ class RequestFrontController implements FrontController
      */
     protected function error(Throwable $e) : int
     {
-        $this->log($e);
+        // nothing here may throw; a throw would escape run() itself
+        try {
+            $this->log($e);
+        } catch (Throwable) {
+            // no channel is left to report on
+        }
 
-        // a throw here would escape run() itself
         try {
             http_response_code(500);
             header('content-type: text/plain');
             fwrite($this->stdout, (string) $e);
         } catch (Throwable) {
-            // the log above has $e already
+            // the log above already has $e
         }
 
         return 1;

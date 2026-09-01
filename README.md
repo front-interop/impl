@@ -31,7 +31,8 @@ php bin/hello.php World
 
 ### _RequestFrontController_
 
-A typical HTTP front controller, reading `$_GET` and emitting HTML.
+A typical HTTP front controller, reading an injected query array and writing
+HTML to an injected `$stdout` resource.
 
 Run `composer hello` at the package root, then visit:
 
