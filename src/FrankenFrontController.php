@@ -4,8 +4,12 @@ declare(strict_types=1);
 namespace FrontInterop\Impl;
 
 use FrontInterop\Interface\FrontController;
+use FrontInterop\Interface\FrontTypeAliases;
 use Throwable;
 
+/**
+ * @phpstan-import-type front_exit_status_int from FrontTypeAliases
+ */
 class FrankenFrontController implements FrontController
 {
     protected bool $continue = true;
@@ -27,28 +31,53 @@ class FrankenFrontController implements FrontController
     public function run() : int
     {
         try {
-            $handler = fn () => $this->handler();
-
-            while (
-                $this->continue
-                && (
-                    $this->requestMax === 0 || $this->requestNum < $this->requestMax
-                )
-            ) {
-                $this->requestNum ++;
-                $this->continue = frankenphp_handle_request($handler);
-                gc_collect_cycles();
-            }
-
-            return $this->lastExitCode;
+            return $this->serve();
         } catch (Throwable $e) {
-            error_log((string) $e);
-            return 1;
+            return $this->error($e);
         }
+    }
+
+    /**
+     * @return front_exit_status_int
+     */
+    protected function serve() : int
+    {
+        $handler = fn () => $this->handler();
+
+        while (
+            $this->continue
+            && ($this->requestMax === 0 || $this->requestNum < $this->requestMax)
+        ) {
+            $this->requestNum ++;
+            $this->continue = $this->handleRequest($handler);
+            gc_collect_cycles();
+        }
+
+        return $this->lastExitCode;
+    }
+
+    protected function handleRequest(callable $handler) : bool
+    {
+        return frankenphp_handle_request($handler);
     }
 
     protected function handler() : void
     {
-        $this->lastExitCode = new RequestFrontController()->run();
+        /** @var string[] $_GET */
+        $this->lastExitCode = new RequestFrontController($_GET)->run();
+    }
+
+    /**
+     * @return front_exit_status_int
+     */
+    protected function error(Throwable $e) : int
+    {
+        $this->log($e);
+        return 1;
+    }
+
+    protected function log(Throwable $e) : void
+    {
+        error_log((string) $e);
     }
 }
