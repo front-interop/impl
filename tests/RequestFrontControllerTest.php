@@ -61,11 +61,11 @@ class RequestFrontControllerTest extends TestCase
 
     public function testSuccess() : void
     {
-        $stdout = $this->memory();
-        $front = new RequestFrontController(['name' => 'World'], $stdout);
+        $output = $this->memory();
+        $front = new RequestFrontController(['name' => 'World'], $output);
         $this->assertSame(0, $front->run());
         $this->assertSame(200, http_response_code());
-        $this->assertSame($this->html('Hello World!'), $this->read($stdout));
+        $this->assertSame($this->html('Hello World!'), $this->read($output));
     }
 
     /**
@@ -74,28 +74,28 @@ class RequestFrontControllerTest extends TestCase
      */
     public function testNoNameStillReportsSuccess() : void
     {
-        $stdout = $this->memory();
-        $front = new RequestFrontController([], $stdout);
+        $output = $this->memory();
+        $front = new RequestFrontController([], $output);
         $this->assertSame(0, $front->run());
         $this->assertSame(422, http_response_code());
 
         $this->assertSame(
             $this->html("Please pass '?name=' in the URL."),
-            $this->read($stdout),
+            $this->read($output),
         );
     }
 
     public function testEscapesName() : void
     {
-        $stdout = $this->memory();
+        $output = $this->memory();
         $query = ['name' => '<script>alert("x")</script>'];
-        new RequestFrontController($query, $stdout)->run();
+        new RequestFrontController($query, $output)->run();
 
         $this->assertSame(
             $this->html(
                 'Hello &lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;!',
             ),
-            $this->read($stdout),
+            $this->read($output),
         );
     }
 
@@ -106,12 +106,12 @@ class RequestFrontControllerTest extends TestCase
      */
     public function testArrayNameDoesNotEscape() : void
     {
-        $stdout = $this->memory();
+        $output = $this->memory();
 
         $query = ['name' => ['World']];
 
         /** @phpstan-ignore argument.type */
-        $front = new class ($query, $stdout) extends RequestFrontController {
+        $front = new class ($query, $output) extends RequestFrontController {
             public ?Throwable $logged = null;
 
             protected function log(Throwable $e) : void
@@ -122,17 +122,17 @@ class RequestFrontControllerTest extends TestCase
 
         $this->assertSame(1, $front->run());
         $this->assertSame(500, http_response_code());
-        $this->assertStringContainsString('TypeError', $this->read($stdout));
+        $this->assertStringContainsString('TypeError', $this->read($output));
         $this->assertInstanceOf(TypeError::class, $front->logged);
     }
 
-    public function testClosedStdoutDoesNotEscape() : void
+    public function testClosedOutputDoesNotEscape() : void
     {
-        $stdout = $this->memory();
+        $output = $this->memory();
 
         $front = new class (
             ['name' => 'World'],
-            $stdout,
+            $output,
         ) extends RequestFrontController {
             public ?Throwable $logged = null;
 
@@ -142,18 +142,18 @@ class RequestFrontControllerTest extends TestCase
             }
         };
 
-        fclose($stdout);
+        fclose($output);
         $this->assertSame(1, $front->run());
         $this->assertInstanceOf(TypeError::class, $front->logged);
     }
 
     public function testZeroIsAName() : void
     {
-        $stdout = $this->memory();
-        $front = new RequestFrontController(['name' => '0'], $stdout);
+        $output = $this->memory();
+        $front = new RequestFrontController(['name' => '0'], $output);
         $this->assertSame(0, $front->run());
         $this->assertSame(200, http_response_code());
-        $this->assertStringContainsString('Hello 0!', $this->read($stdout));
+        $this->assertStringContainsString('Hello 0!', $this->read($output));
     }
 
     public function testThrowingLogDoesNotEscape() : void
@@ -173,10 +173,10 @@ class RequestFrontControllerTest extends TestCase
         $this->assertSame(1, $front->run());
     }
 
-    public function testRejectsNonStreamStdout() : void
+    public function testRejectsNonStreamOutput() : void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('$stdout is not a stream.');
+        $this->expectExceptionMessage('$output is not a stream.');
 
         /** @phpstan-ignore argument.type */
         new RequestFrontController([], false);
@@ -185,7 +185,7 @@ class RequestFrontControllerTest extends TestCase
     public function testRejectsNonStreamResource() : void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('$stdout is not a stream.');
+        $this->expectExceptionMessage('$output is not a stream.');
 
         $context = stream_context_create();
         new RequestFrontController([], $context);

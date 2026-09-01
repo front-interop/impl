@@ -32,7 +32,7 @@ php bin/hello.php World
 ### _RequestFrontController_
 
 A typical HTTP front controller, reading an injected query array and writing
-HTML to an injected `$stdout` resource.
+HTML to an injected `$output` resource.
 
 Run `composer hello` at the package root, then visit:
 

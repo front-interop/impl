@@ -16,21 +16,16 @@ class RequestFrontController implements FrontController
     /**
      * @var resource
      */
-    protected mixed $stdout;
+    protected mixed $output;
 
     /**
      * @param string[] $query
-     * @param null|resource $stdout
+     * @param null|resource $output
      */
-    public function __construct(protected array $query, mixed $stdout = null)
+    public function __construct(protected array $query, mixed $output = null)
     {
-        $stdout ??= fopen('php://output', 'wb');
-
-        if (! is_resource($stdout) || get_resource_type($stdout) !== 'stream') {
-            throw new InvalidArgumentException('$stdout is not a stream.');
-        }
-
-        $this->stdout = $stdout;
+        $output ??= fopen('php://output', 'wb');
+        $this->output = $this->validStream('output', $output);
     }
 
     /**
@@ -45,6 +40,18 @@ class RequestFrontController implements FrontController
             $this->release($e);
             return $status;
         }
+    }
+
+    /**
+     * @return resource
+     */
+    protected function validStream(string $name, mixed $stream) : mixed
+    {
+        if (! is_resource($stream) || get_resource_type($stream) !== 'stream') {
+            throw new InvalidArgumentException("\${$name} is not a stream.");
+        }
+
+        return $stream;
     }
 
     /**
@@ -74,7 +81,7 @@ class RequestFrontController implements FrontController
             </html>
             HTML;
 
-        fwrite($this->stdout, $html);
+        fwrite($this->output, $html);
         return 0;
     }
 
@@ -93,7 +100,7 @@ class RequestFrontController implements FrontController
         try {
             http_response_code(500);
             header('content-type: text/plain');
-            fwrite($this->stdout, (string) $e);
+            fwrite($this->output, (string) $e);
         } catch (Throwable) {
             // the log above already has $e
         }
