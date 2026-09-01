@@ -16,7 +16,7 @@ class FrankenFrontController extends AFrontController
     protected int $requestNum = 0;
 
     /**
-     * @var int<0,254>
+     * @var front_exit_status_int
      */
     protected int $lastExitCode = 0;
 

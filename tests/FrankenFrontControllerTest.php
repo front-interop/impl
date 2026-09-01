@@ -159,7 +159,7 @@ class FrankenFrontControllerTest extends TestCase
     }
 
     /**
-     * A Throwable raised while handling a request must not escape run().
+     * A Throwable from the handler must not escape run().
      */
     public function testThrowingHandlerDoesNotEscape() : void
     {
