@@ -34,18 +34,10 @@ class ConsoleFrontController implements FrontController
         mixed $stderr = null,
     ) {
         $stdout ??= fopen('php://stdout', 'wb');
+        $this->stdout = $this->validStream('stdout', $stdout);
+
         $stderr ??= fopen('php://stderr', 'wb');
-
-        if (! is_resource($stdout) || get_resource_type($stdout) !== 'stream') {
-            throw new InvalidArgumentException('$stdout is not a stream.');
-        }
-
-        if (! is_resource($stderr) || get_resource_type($stderr) !== 'stream') {
-            throw new InvalidArgumentException('$stderr is not a stream.');
-        }
-
-        $this->stdout = $stdout;
-        $this->stderr = $stderr;
+        $this->stderr = $this->validStream('stderr', $stderr);
     }
 
     /**
@@ -56,8 +48,22 @@ class ConsoleFrontController implements FrontController
         try {
             return $this->hello();
         } catch (Throwable $e) {
-            return $this->error($e);
+            $status = $this->error($e);
+            $this->release($e);
+            return $status;
         }
+    }
+
+    /**
+     * @return resource
+     */
+    protected function validStream(string $name, mixed $stream) : mixed
+    {
+        if (! is_resource($stream) || get_resource_type($stream) !== 'stream') {
+            throw new InvalidArgumentException("\${$name} is not a stream.");
+        }
+
+        return $stream;
     }
 
     /**
@@ -87,8 +93,9 @@ class ConsoleFrontController implements FrontController
     {
         // nothing here may throw; a throw would escape run() itself
         try {
-            fwrite($this->stderr, (string) $e . PHP_EOL);
-            return 1;
+            if (fwrite($this->stderr, (string) $e . PHP_EOL) !== false) {
+                return 1;
+            }
         } catch (Throwable) {
             // stderr failed, so fall back to the log
         }
@@ -100,6 +107,21 @@ class ConsoleFrontController implements FrontController
         }
 
         return 1;
+    }
+
+    /**
+     * Releases the caught Throwable inside a guard. Its destructor runs on
+     * release and may throw, and a throw after run() has its status would
+     * reach the caller.
+     */
+    protected function release(?Throwable &$e) : void
+    {
+        try {
+            $e = null;
+
+            /** @phpstan-ignore catch.neverThrown */
+        } catch (Throwable) {
+        }
     }
 
     protected function log(Throwable $e) : void

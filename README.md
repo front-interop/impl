@@ -44,6 +44,11 @@ A specialized front controller for [FrankenPHP][], wrapping a
 `RequestFrontController` in a `frankenphp_handle_request()` worker loop
 bounded by an optional maximum request count (`0` for unbounded).
 
+`ConsoleFrontController` and `RequestFrontController` throw
+`InvalidArgumentException` when a stream argument is not a stream resource.
+Construction happens before `run()`, and the interface directives bind
+`run()` alone, so this is outside them.
+
 ## Classes
 
 | Interface         | Implementation                                                               |

@@ -33,7 +33,9 @@ class FrankenFrontController implements FrontController
         try {
             return $this->serve();
         } catch (Throwable $e) {
-            return $this->error($e);
+            $status = $this->error($e);
+            $this->release($e);
+            return $status;
         }
     }
 
@@ -80,6 +82,21 @@ class FrankenFrontController implements FrontController
         }
 
         return 1;
+    }
+
+    /**
+     * Releases the caught Throwable inside a guard. Its destructor runs on
+     * release and may throw, and a throw after run() has its status would
+     * reach the caller.
+     */
+    protected function release(?Throwable &$e) : void
+    {
+        try {
+            $e = null;
+
+            /** @phpstan-ignore catch.neverThrown */
+        } catch (Throwable) {
+        }
     }
 
     protected function log(Throwable $e) : void

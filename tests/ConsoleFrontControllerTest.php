@@ -5,6 +5,7 @@ namespace FrontInterop\Impl;
 
 use InvalidArgumentException;
 use LogicException;
+use PHPUnit\Framework\Attributes\WithoutErrorHandler;
 use PHPUnit\Framework\TestCase;
 use Throwable;
 use TypeError;
@@ -90,6 +91,65 @@ class ConsoleFrontControllerTest extends TestCase
         fclose($stdout);
         $this->assertSame(1, $front->run());
         $this->assertStringContainsString('TypeError', $this->read($stderr));
+    }
+
+    /**
+     * The log is a fallback for when stderr itself fails. If stderr took the
+     * report, the log must not be used as well.
+     */
+
+    /**
+     * A stream can be open and still refuse the write. fwrite() reports that
+     * by returning false, not by throwing, so the fallback must test the
+     * return value and not rely on a catch.
+     */
+    #[WithoutErrorHandler]
+    public function testUnwritableStderrFallsBackToTheLog() : void
+    {
+        $stdout = $this->memory();
+        $stderr = fopen(__FILE__, 'rb');
+        assert(is_resource($stderr));
+
+        $front = new class (
+            ['hello.php', 'World'],
+            $stdout,
+            $stderr,
+        ) extends ConsoleFrontController {
+            public ?Throwable $logged = null;
+
+            protected function log(Throwable $e) : void
+            {
+                $this->logged = $e;
+            }
+        };
+
+        fclose($stdout);
+        $this->assertSame(1, $front->run());
+        $this->assertInstanceOf(TypeError::class, $front->logged);
+    }
+
+    public function testAcceptedStderrDoesNotAlsoLog() : void
+    {
+        $stdout = $this->memory();
+        $stderr = $this->memory();
+
+        $front = new class (
+            ['hello.php', 'World'],
+            $stdout,
+            $stderr,
+        ) extends ConsoleFrontController {
+            public ?Throwable $logged = null;
+
+            protected function log(Throwable $e) : void
+            {
+                $this->logged = $e;
+            }
+        };
+
+        fclose($stdout);
+        $this->assertSame(1, $front->run());
+        $this->assertStringContainsString('TypeError', $this->read($stderr));
+        $this->assertNull($front->logged);
     }
 
     public function testZeroIsAName() : void

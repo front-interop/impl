@@ -41,7 +41,9 @@ class RequestFrontController implements FrontController
         try {
             return $this->hello();
         } catch (Throwable $e) {
-            return $this->error($e);
+            $status = $this->error($e);
+            $this->release($e);
+            return $status;
         }
     }
 
@@ -85,7 +87,7 @@ class RequestFrontController implements FrontController
         try {
             $this->log($e);
         } catch (Throwable) {
-            // no channel is left to report on
+            // the response below still reports $e
         }
 
         try {
@@ -97,6 +99,21 @@ class RequestFrontController implements FrontController
         }
 
         return 1;
+    }
+
+    /**
+     * Releases the caught Throwable inside a guard. Its destructor runs on
+     * release and may throw, and a throw after run() has its status would
+     * reach the caller.
+     */
+    protected function release(?Throwable &$e) : void
+    {
+        try {
+            $e = null;
+
+            /** @phpstan-ignore catch.neverThrown */
+        } catch (Throwable) {
+        }
     }
 
     protected function log(Throwable $e) : void
