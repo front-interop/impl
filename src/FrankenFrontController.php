@@ -3,14 +3,13 @@ declare(strict_types=1);
 
 namespace FrontInterop\Impl;
 
-use FrontInterop\Interface\FrontController;
 use FrontInterop\Interface\FrontTypeAliases;
 use Throwable;
 
 /**
  * @phpstan-import-type front_exit_status_int from FrontTypeAliases
  */
-class FrankenFrontController implements FrontController
+class FrankenFrontController extends AFrontController
 {
     protected bool $continue = true;
 
@@ -82,25 +81,5 @@ class FrankenFrontController implements FrontController
         }
 
         return 1;
-    }
-
-    /**
-     * Releases the caught Throwable inside a guard. Its destructor runs on
-     * release and may throw, and a throw after run() has its status would
-     * reach the caller.
-     */
-    protected function release(?Throwable &$e) : void
-    {
-        try {
-            $e = null;
-
-            /** @phpstan-ignore catch.neverThrown */
-        } catch (Throwable) {
-        }
-    }
-
-    protected function log(Throwable $e) : void
-    {
-        error_log((string) $e);
     }
 }
