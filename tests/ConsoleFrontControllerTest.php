@@ -5,7 +5,6 @@ namespace FrontInterop\Impl;
 
 use InvalidArgumentException;
 use LogicException;
-use PHPUnit\Framework\Attributes\WithoutErrorHandler;
 use PHPUnit\Framework\TestCase;
 use Throwable;
 use TypeError;
@@ -103,7 +102,6 @@ class ConsoleFrontControllerTest extends TestCase
      * by returning false, not by throwing, so the fallback must test the
      * return value and not rely on a catch.
      */
-    #[WithoutErrorHandler]
     public function testUnwritableStderrFallsBackToTheLog() : void
     {
         $stdout = $this->memory();
@@ -124,7 +122,17 @@ class ConsoleFrontControllerTest extends TestCase
         };
 
         fclose($stdout);
-        $this->assertSame(1, $front->run());
+
+        // the failing write emits a notice; swallow it, do not report it
+        set_error_handler( static fn () : bool => true);
+
+        try {
+            $status = $front->run();
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertSame(1, $status);
         $this->assertInstanceOf(TypeError::class, $front->logged);
     }
 
