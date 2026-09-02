@@ -7,8 +7,8 @@ Reference implementations of the [Front-Interop][] interface for PHP 8.4+.
 
 These implementations are intentionally naive; they exist to showcase the
 [_FrontController_][] contract itself. Production front controllers would be
-obtained from an IoC container and would compose a request/response system,
-a router/dispatcher, and an error handler.
+obtained from an IOC container and would compose a request/response system,
+a router/dispatcher, and so on.
 
 ## Installation
 
@@ -22,8 +22,18 @@ Three reference implementations cover three execution contexts.
 
 ### _ConsoleFrontController_
 
-A typical command-line console front controller, reading `$argv` and writing
-to injected `$stdout`/`$stderr` resources.
+A command-line front controller, reading `$argv` and writing to `$stdout` and
+`$stderr`. Both streams are optional; they default to `php://stdout` and
+`php://stderr`.
+
+```php
+use FrontInterop\Impl\ConsoleFrontController;
+
+$front = new ConsoleFrontController($argv);
+exit($front->run());
+```
+
+That is `bin/hello.php`, apart from the autoloader. Run it with:
 
 ```
 php bin/hello.php World
@@ -31,57 +41,105 @@ php bin/hello.php World
 
 ### _RequestFrontController_
 
-A typical HTTP front controller, reading an injected query array and writing
-HTML to an injected `$output` resource.
+An HTTP front controller, reading an injected query array and writing HTML to
+`$output`. That stream is optional; it defaults to `php://output`.
 
-Run `composer hello` at the package root, then visit:
+```php
+use FrontInterop\Impl\RequestFrontController;
+
+$front = new RequestFrontController($_GET);
+exit($front->run());
+```
+
+That is `public/index.php`, apart from the autoloader. Run `composer hello`
+at the package root, then visit:
 
 <http://localhost:8080/index.php?name=World>
 
 ### _FrankenFrontController_
 
-A specialized front controller for [FrankenPHP][], wrapping a
-`RequestFrontController` in a `frankenphp_handle_request()` worker loop
-bounded by an optional maximum request count (`0` for unbounded).
+A front controller for [FrankenPHP][], wrapping a _RequestFrontController_ in
+a `frankenphp_handle_request()` worker loop.
 
-`ConsoleFrontController` and `RequestFrontController` throw
-`InvalidArgumentException` when a stream argument is not a stream resource.
-Construction happens before `run()`, and the interface directives bind
-`run()` alone, so this is outside them.
+```php
+use FrontInterop\Impl\FrankenFrontController;
+
+$front = new FrankenFrontController(100);
+exit($front->run());
+```
+
+It runs only under the FrankenPHP binary in worker mode, because
+`frankenphp_handle_request()` does not exist elsewhere.
 
 ## Classes
 
 | Interface         | Implementation                                                               |
 | ----------------- | ---------------------------------------------------------------------------- |
-| _FrontController_ | `ConsoleFrontController`, `RequestFrontController`, `FrankenFrontController` |
+| _FrontController_ | _ConsoleFrontController_, _RequestFrontController_, _FrankenFrontController_ |
 
 All classes are in the `FrontInterop\Impl` namespace. The three concrete
-classes extend `AFrontController`, which carries the error-handling helpers
-they share.
+classes extend _AFrontController_ for the helpers they share.
 
-## Error handling
+## Conformance
 
-The interface requires that `run()` return a status between `0` and `254`,
-that it not terminate the process, and that it not let a `Throwable` escape.
-The last of those three is what shapes the code below.
+Three of the Front-Interop directives for `run()` shape these implementations:
 
-Each `run()` wraps its work in a `try` and hands anything caught to
-`caught()`, which reports through `error()` and then releases the
-`Throwable`. The release is guarded because the destructor runs at that
-moment, and a throw there would reach the caller after `run()` had already
-computed its status.
+- return a status between `0` and `254`
+- do not terminate the process in place of returning
+- do not let a _Throwable_ escape
 
-Each `error()` guards its own writes for the same reason. The handling can
-fail as well: a stream can be closed, or open and refuse the write, and a
-report of a failure must not become a second failure.
-`ConsoleFrontController` writes to stderr and falls back to `log()` only when
-that write fails, because on the command line `error_log()` writes to stderr
-as well. `RequestFrontController` always logs, then attempts the response
-separately, so a failed log does not prevent the `500`.
+### Returning a status
 
-A `0` does not mean that nothing went wrong. `RequestFrontController` returns
-`0` with a `422` when no name is given: the request was handled and a
-response was emitted, which is success in an HTTP context.
+_ConsoleFrontController_ returns `1` when no name is given and `0` once it has
+written its greeting.
+
+_RequestFrontController_ returns `0` after emitting its page, and `1` from
+`error()`. A `0` does not mean that nothing went wrong: it returns `0` with a
+`422` when no name is given, because the request was handled and a response
+was emitted. That counts as success in an HTTP context.
+
+_FrankenFrontController_ returns the status from the last request handled,
+set only by `RequestFrontController::run()`. It returns `0` if the runtime
+ends the loop before any request is handled.
+
+The `error()` method in every controller returns `1`.
+
+### Not terminating the process
+
+None of the implementations call `exit()` or `die()`. Their *callers* do:
+`bin/hello.php` and `public/index.php` both end with `exit($front->run())`, so
+the decision to end the process belongs to the code that started it.
+
+_FrankenFrontController_ bounds its worker loop with `$requestMax` so that
+`run()` returns after that many requests. A `0` maximum defers the decision to
+the runtime. The loop ends when the runtime returns `false`.
+
+### Not letting a _Throwable_ escape
+
+Each implementation of `run()` wraps its work in a `try`/`catch` block. The
+catch sends the _Throwable_ to `caught()`, which reports through `error()` and
+then releases the _Throwable_. (The release is guarded because the destructor
+runs at that moment, and a throw there would reach the caller after `run()`
+had already computed its status.)
+
+Each `error()` implementation guards its own writes too, for a different
+cause. Stream operations there can fail: a stream can be closed, or open and
+refuse the write, and a report of a failure must not itself become a second
+failure.
+
+_ConsoleFrontController_ writes to stderr and falls back to `log()` only when
+that write fails. It tests what `fwrite()` returns, because a stream that
+refuses the write reports `false` rather than throwing.
+
+_RequestFrontController_ always logs, then attempts the response separately,
+so a failed log does not prevent the `500`. _FrankenFrontController_ logs and
+returns `1`.
+
+The directives bind `run()` alone. _ConsoleFrontController_ and
+_RequestFrontController_ throw _InvalidArgumentException_ from `__construct()`
+when a stream argument is not a stream resource. Construction is outside them.
+
+* * *
 
 See the [Front-Interop][] interface package for the full specification.
 
