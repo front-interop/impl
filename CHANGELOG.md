@@ -1,6 +1,6 @@
 # Change Log
 
-## NEXT
+## 1.0.0-beta2
 
 Conform to the revised interface directives, and add a test suite.
 
