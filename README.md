@@ -138,6 +138,17 @@ The directives bind `run()` alone. _ConsoleFrontController_ and
 _RequestFrontController_ throw _InvalidArgumentException_ from `__construct()`
 when a stream argument is not a stream resource. Construction is outside them.
 
+## Testing
+
+`composer test` runs the suite. Most tests need nothing beyond PHP.
+
+Two tests in `FrankenServerTest` start a real `frankenphp` binary in worker
+mode and send it HTTP requests. They look for the binary on the `PATH`, or
+at the path in the `FRANKENPHP_BIN` environment variable, and skip when they
+find none. They also skip on Windows. Set `REQUIRE_FRANKENPHP=1` to make a
+missing binary a failure; CI sets it on Ubuntu with PHP 8.4. On macOS,
+`brew install dunglas/frankenphp/frankenphp` installs the binary.
+
 * * *
 
 See the [Front-Interop][] interface package for the full specification.
