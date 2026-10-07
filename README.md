@@ -85,7 +85,7 @@ classes extend _AFrontController_ for the helpers they share.
 Three of the Front-Interop directives for `run()` shape these implementations:
 
 - return a status between `0` and `254`
-- do not terminate the process in place of returning
+- do not end `run()` by calling `exit()` or `die()`
 - do not let a _Throwable_ escape
 
 ### Returning a status
@@ -104,11 +104,12 @@ ends the loop before any request is handled.
 
 The `error()` method in every controller returns `1`.
 
-### Not terminating the process
+### Not calling exit()
 
-None of the implementations call `exit()` or `die()`. Their *callers* do:
-`bin/hello.php` and `public/index.php` both end with `exit($front->run())`, so
-the decision to end the process belongs to the code that started it.
+None of the implementations call `exit()` or `die()`. The scripts that start
+them do: `bin/hello.php` and `public/index.php` both end with
+`exit($front->run())`. The script receives the status and decides what to do
+with it.
 
 _FrankenFrontController_ bounds its worker loop with `$requestMax` so that
 `run()` returns after that many requests. A `0` maximum defers the decision to
@@ -122,10 +123,8 @@ then releases the _Throwable_. (The release is guarded because the destructor
 runs at that moment, and a throw there would reach the caller after `run()`
 had already computed its status.)
 
-Each `error()` implementation guards its own writes too, for a different
-cause. Stream operations there can fail: a stream can be closed, or open and
-refuse the write, and a report of a failure must not itself become a second
-failure.
+Each `error()` implementation guards its own writes too. A stream can be closed,
+or open and refuse the write, and a throw from `error()` would escape `run()`.
 
 _ConsoleFrontController_ writes to stderr and falls back to `log()` only when
 that write fails. It tests what `fwrite()` returns, because a stream that
