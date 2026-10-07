@@ -42,5 +42,15 @@ jobs:
     - name: Install dependencies
       run: composer install
 
+    - name: Install FrankenPHP
+      if: matrix.operating-system == 'ubuntu-latest' && matrix.php-versions == '8.4'
+      run: |
+        curl -fsSL -o "$RUNNER_TEMP/frankenphp" \
+          https://github.com/php/frankenphp/releases/download/v1.12.6/frankenphp-linux-x86_64
+        echo "fa74f59593d32f43be9f2803de08cdeed06e9ae5d654a912a086b92b9b290394  $RUNNER_TEMP/frankenphp" | sha256sum --check
+        chmod +x "$RUNNER_TEMP/frankenphp"
+        echo "FRANKENPHP_BIN=$RUNNER_TEMP/frankenphp" >> "$GITHUB_ENV"
+        echo "REQUIRE_FRANKENPHP=1" >> "$GITHUB_ENV"
+
     - name: QA checks
       run: composer check
