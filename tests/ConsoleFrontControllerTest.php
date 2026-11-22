@@ -120,7 +120,7 @@ class ConsoleFrontControllerTest extends TestCase
         fclose($stdout);
 
         // the failing write emits a notice; swallow it, do not report it
-        set_error_handler( static fn () : bool => true);
+        set_error_handler(static fn () : bool => true);
 
         try {
             $status = $front->run();
