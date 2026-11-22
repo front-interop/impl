@@ -122,7 +122,9 @@ class RequestFrontControllerTest extends TestCase
 
         $this->assertSame(1, $front->run());
         $this->assertSame(500, http_response_code());
-        $this->assertStringContainsString('TypeError', $this->read($output));
+
+        // the client sees a fixed message, and only the log has the details
+        $this->assertSame('Server error.', $this->read($output));
         $this->assertInstanceOf(TypeError::class, $front->logged);
     }
 
@@ -171,6 +173,34 @@ class RequestFrontControllerTest extends TestCase
         };
 
         $this->assertSame(1, $front->run());
+    }
+
+    /**
+     * caught() releases the Throwable inside a guard. The release runs the
+     * Throwable's destructor, and a throw from there must not escape run()
+     * after the status has been computed.
+     */
+    public function testThrowingDestructorDoesNotEscape() : void
+    {
+        $front = new class ([], $this->memory()) extends RequestFrontController {
+            protected function hello() : int
+            {
+                throw new class ('boom') extends RuntimeException {
+                    public function __destruct()
+                    {
+                        throw new LogicException('the destructor failed');
+                    }
+                };
+            }
+
+            protected function log(Throwable $e) : void
+            {
+                // keep the report off the test output, and hold no reference
+            }
+        };
+
+        $this->assertSame(1, $front->run());
+        $this->assertSame(500, http_response_code());
     }
 
     public function testRejectsNonStreamOutput() : void

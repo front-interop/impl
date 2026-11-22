@@ -81,10 +81,11 @@ class RequestFrontController extends AFrontController
             // the response below still reports $e
         }
 
+        // the client gets a fixed message; the details stay in the log
         try {
             http_response_code(500);
             header('content-type: text/plain');
-            fwrite($this->output, (string) $e);
+            fwrite($this->output, 'Server error.');
         } catch (Throwable) {
             // the log above already has $e
         }

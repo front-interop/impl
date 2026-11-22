@@ -93,7 +93,7 @@ class FrankenServerTest extends TestCase
         for ($i = 0; $i < 3; $i ++) {
             [$code, $body] = $this->get('name[]=x');
             $this->assertSame(500, $code);
-            $this->assertStringContainsString('TypeError', $body);
+            $this->assertSame('Server error.', $body);
         }
 
         $this->assertSame(['1'], $this->statuses(1));

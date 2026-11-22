@@ -6,6 +6,7 @@ namespace FrontInterop\Impl;
 use InvalidArgumentException;
 use LogicException;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use Throwable;
 use TypeError;
 
@@ -93,11 +94,6 @@ class ConsoleFrontControllerTest extends TestCase
     }
 
     /**
-     * The log is a fallback for when stderr itself fails. If stderr took the
-     * report, the log must not be used as well.
-     */
-
-    /**
      * A stream can be open and still refuse the write. fwrite() reports that
      * by returning false, not by throwing, so the fallback must test the
      * return value and not rely on a catch.
@@ -136,6 +132,10 @@ class ConsoleFrontControllerTest extends TestCase
         $this->assertInstanceOf(TypeError::class, $front->logged);
     }
 
+    /**
+     * The log is a fallback for when stderr itself fails. If stderr took the
+     * report, the log must not be used as well.
+     */
     public function testAcceptedStderrDoesNotAlsoLog() : void
     {
         $stdout = $this->memory();
@@ -184,6 +184,32 @@ class ConsoleFrontControllerTest extends TestCase
         };
 
         fclose($stderr);
+        $this->assertSame(1, $front->run());
+    }
+
+    /**
+     * caught() releases the Throwable inside a guard. The release runs the
+     * Throwable's destructor, and a throw from there must not escape run()
+     * after the status has been computed.
+     */
+    public function testThrowingDestructorDoesNotEscape() : void
+    {
+        $front = new class (
+            ['hello.php'],
+            $this->memory(),
+            $this->memory(),
+        ) extends ConsoleFrontController {
+            protected function hello() : int
+            {
+                throw new class ('boom') extends RuntimeException {
+                    public function __destruct()
+                    {
+                        throw new LogicException('the destructor failed');
+                    }
+                };
+            }
+        };
+
         $this->assertSame(1, $front->run());
     }
 

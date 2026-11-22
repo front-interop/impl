@@ -61,7 +61,7 @@ class FrankenFrontControllerTest extends TestCase
         }
 
         $this->assertSame(1, $exit);
-        $this->assertStringContainsString('TypeError', $html);
+        $this->assertSame('Server error.', $html);
     }
 
     public function testThrowingLogDoesNotEscape() : void
@@ -81,6 +81,39 @@ class FrankenFrontControllerTest extends TestCase
             protected function log(Throwable $e) : void
             {
                 throw new LogicException('the log failed too');
+            }
+        };
+
+        $this->assertSame(1, $franken->run());
+    }
+
+    /**
+     * caught() releases the Throwable inside a guard. The release runs the
+     * Throwable's destructor, and a throw from there must not escape run()
+     * after the status has been computed.
+     */
+    public function testThrowingDestructorDoesNotEscape() : void
+    {
+        $franken = new class (1) extends FrankenFrontController {
+            protected function handleRequest(callable $handler) : bool
+            {
+                $handler();
+                return false;
+            }
+
+            protected function handler() : void
+            {
+                throw new class ('boom') extends RuntimeException {
+                    public function __destruct()
+                    {
+                        throw new LogicException('the destructor failed');
+                    }
+                };
+            }
+
+            protected function log(Throwable $e) : void
+            {
+                // keep the report off the test output, and hold no reference
             }
         };
 

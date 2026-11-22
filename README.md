@@ -131,8 +131,9 @@ that write fails. It tests what `fwrite()` returns, because a stream that
 refuses the write reports `false` rather than throwing.
 
 _RequestFrontController_ always logs, then attempts the response separately,
-so a failed log does not prevent the `500`. _FrankenFrontController_ logs and
-returns `1`.
+so a failed log does not prevent the `500`. The response says only "Server
+error."; the details of the _Throwable_ go to the log, not to the client.
+_FrankenFrontController_ logs and returns `1`.
 
 The directives bind `run()` alone. _ConsoleFrontController_ and
 _RequestFrontController_ throw _InvalidArgumentException_ from `__construct()`
