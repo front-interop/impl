@@ -15,7 +15,7 @@
     ],
     "require": {
         "php": ">=8.4",
-        "front-interop/interface": "1.x@dev"
+        "front-interop/interface": "^1.0"
     },
     "autoload": {
         "psr-4" : {
